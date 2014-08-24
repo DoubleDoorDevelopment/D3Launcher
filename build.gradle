@@ -1,0 +1,81 @@
+buildscript {
+  repositories{
+    mavenCentral()
+  }
+  dependencies {
+    classpath group: "com.github.rodionmoiseev.gradle.plugins", name: "idea-utils", version: "0.2"
+  }
+}
+
+apply plugin: "java"
+apply plugin: "maven"
+apply plugin: "idea"
+apply plugin: "idea-utils"
+
+archivesBaseName = "D3Launcher"
+group = "net.doubledoordev.launcher"
+version = "0.0.0"
+
+def vendor = "DoubleDoorDevelopment"
+def mainClassName = group + ".Main"
+def gitURL = "github.com/DoubleDoorDevelopment/D3Launcher"
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    compile
+    deployJars
+}
+
+idea {
+    project {
+        copyright {
+            name = "Copyright"
+            license = file("LICENSE.txt")
+        }
+        runConfigurations {
+            Launcher {
+                type = "Application"
+                mainClass = mainClassName
+                file ("run/").mkdir()
+                module = project
+                workingDirectory = file ("run/")
+            }
+        }
+    }
+}
+
+repositories {
+	mavenCentral()
+    maven {
+		name = 'Mojang libs'
+		url = 'https://libraries.minecraft.net/'
+	}
+}
+
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    compile group: "com.google.code.gson", name: "gson", version: "2.2.4"
+    compile group: "org.apache.maven", name: "maven-model", version: "3.2.3"
+    compile group: "org.apache.logging.log4j", name: "log4j-core", version: "2.0.2"
+    compile group: "com.mojang", name: "authlib", version: "1.5.16"
+}
+
+jar {
+    from configurations.runtime.asFileTree.files.collect { zipTree(it) }
+    
+    manifest {
+        attributes (
+            "Created-By"             : vendor,
+            "Specification-Title"    : project.name,
+            "Specification-Version"  : project.version,
+            "Specification-Vendor"   : vendor,
+            "Implementation-Title"   : project.name,
+            "Implementation-Version" : project.version,
+            "Implementation-Vendor"  : vendor,
+            "Main-Class"             : mainClassName
+        )
+    }
+}
