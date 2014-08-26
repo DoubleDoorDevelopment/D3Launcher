@@ -36,8 +36,18 @@ idea {
         }
         runConfigurations {
             Launcher {
+                name = "Client"
                 type = "Application"
-                mainClass = mainClassName
+                mainClass = project.group + ".client.Client"
+                file ("run/").mkdir()
+                module = project
+                workingDirectory = file ("run/")
+            }
+
+            Launcher {
+                name = "Server"
+                type = "Application"
+                mainClass = project.group + ".client.Server"
                 file ("run/").mkdir()
                 module = project
                 workingDirectory = file ("run/")
@@ -62,12 +72,6 @@ dependencies {
     compile group: "com.mojang", name: "authlib", version: "1.5.16"
 }
 
-artifacts {
-	archives jar
-    archives sourcesJar
-    archives serverJar
-}
-
 jar {
     from "LICENSE.txt"
     from configurations.runtime.asFileTree.files.collect { zipTree(it) }
@@ -81,7 +85,7 @@ jar {
             "Implementation-Title"   : project.name,
             "Implementation-Version" : project.version,
             "Implementation-Vendor"  : vendor,
-            "Main-Class"             : project.group + ".client.Main"
+            "Main-Class"             : project.group + ".client.Client"
         )
     }
 }
@@ -90,7 +94,6 @@ task sourcesJar(type: Jar) {
     from "LICENSE.txt"
     from sourceSets.main.allSource
     classifier = 'src'
-    appendix = project.minecraft.version
 }
 
 task serverJar(type: Jar) {
@@ -108,7 +111,14 @@ task serverJar(type: Jar) {
             "Implementation-Title"   : project.name,
             "Implementation-Version" : project.version,
             "Implementation-Vendor"  : vendor,
-            "Main-Class"             : project.group + ".server.Main"
+            "Main-Class"             : project.group + ".server.Server"
         )
     }
 }
+
+artifacts {
+    archives jar
+    archives sourcesJar
+    archives serverJar
+}
+
