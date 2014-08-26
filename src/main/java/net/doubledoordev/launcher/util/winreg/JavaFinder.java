@@ -186,7 +186,7 @@ public class JavaFinder
             List<JavaInfo> java32 = Lists.newArrayList();
             List<JavaInfo> java64 = Lists.newArrayList();
 
-            LOGGER.info("The FTB Launcher has found the following Java versions installed:");
+            LOGGER.info("The D3 Launcher has found the following Java versions installed:");
             for (JavaInfo java : javas)
             {
                 LOGGER.info(java.toString());

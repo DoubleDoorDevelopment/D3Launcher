@@ -17,7 +17,6 @@ group = "net.doubledoordev.launcher"
 version = "0.0.0"
 
 def vendor = "DoubleDoorDevelopment"
-def mainClassName = group + ".Main"
 def gitURL = "github.com/DoubleDoorDevelopment/D3Launcher"
 
 sourceCompatibility = 1.7
@@ -63,7 +62,14 @@ dependencies {
     compile group: "com.mojang", name: "authlib", version: "1.5.16"
 }
 
+artifacts {
+	archives jar
+    archives sourcesJar
+    archives serverJar
+}
+
 jar {
+    from "LICENSE.txt"
     from configurations.runtime.asFileTree.files.collect { zipTree(it) }
     
     manifest {
@@ -75,7 +81,34 @@ jar {
             "Implementation-Title"   : project.name,
             "Implementation-Version" : project.version,
             "Implementation-Vendor"  : vendor,
-            "Main-Class"             : mainClassName
+            "Main-Class"             : project.group + ".client.Main"
+        )
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from "LICENSE.txt"
+    from sourceSets.main.allSource
+    classifier = 'src'
+    appendix = project.minecraft.version
+}
+
+task serverJar(type: Jar) {
+    from "LICENSE.txt"
+    from configurations.runtime.asFileTree.files.collect { zipTree(it) }
+    
+    classifier = 'server'
+    
+    manifest {
+        attributes (
+            "Created-By"             : vendor,
+            "Specification-Title"    : project.name,
+            "Specification-Version"  : project.version,
+            "Specification-Vendor"   : vendor,
+            "Implementation-Title"   : project.name,
+            "Implementation-Version" : project.version,
+            "Implementation-Vendor"  : vendor,
+            "Main-Class"             : project.group + ".server.Main"
         )
     }
 }

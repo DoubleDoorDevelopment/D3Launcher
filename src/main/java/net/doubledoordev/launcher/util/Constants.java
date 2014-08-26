@@ -45,6 +45,7 @@ import java.io.IOException;
 public class Constants
 {
     public static final Logger LOGGER = LogManager.getLogger(Main.class.getSimpleName());
+    public static final Logger LOGGER_INSTALLER = LogManager.getLogger("Installer");
     public static final Gson   GSON   = new GsonBuilder().setPrettyPrinting().create();
     public static final String OPTIMAZATIONS = "-Xms1G -Xmx1G -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CICompilerCountPerCPU -XX:+TieredCompilation";
 

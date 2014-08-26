@@ -28,49 +28,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.doubledoordev.launcher.util.packData;
+package net.doubledoordev.launcher.client;
 
 import net.doubledoordev.launcher.Main;
-import org.apache.maven.model.Dependency;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import net.doubledoordev.launcher.util.Side;
 
 /**
  * @author Dries007
  */
-@SuppressWarnings("UnusedDeclaration")
-public class PackData
+public class Client extends Main
 {
-    public String          mcversion;
-    public String          forgeversion;
-    public HashSet<String> mavenrepos;
-    public HashSet<Mod>    mods;
-
-    @Override
-    public String toString()
+    public static void main(String[] args) throws Exception
     {
-        return String.format("MC: %s Forge: %s Repos:%s Mods:%s", mcversion, forgeversion, mavenrepos, mods);
+        new Client(args);
     }
 
-    public List<Dependency> getAllModsAsDependencies()
+    protected Client(String[] args) throws Exception
     {
-        ArrayList<Dependency> dependencies = new ArrayList<>();
-        for (Mod mod : mods)
-        {
-            if (mod.side.appliesTo(Main.instance.currentSide)) dependencies.add(mod);
-        }
-        return dependencies;
-    }
-
-    public List<Dependency> getAllConfigsAsDependencies()
-    {
-        ArrayList<Dependency> dependencies = new ArrayList<>();
-        for (Mod mod : mods)
-        {
-            if (mod.config != null) dependencies.add(mod.config);
-        }
-        return dependencies;
+        super(Side.CLIENT);
     }
 }

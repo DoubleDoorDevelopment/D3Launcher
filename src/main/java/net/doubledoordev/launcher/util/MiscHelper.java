@@ -33,6 +33,11 @@ package net.doubledoordev.launcher.util;
 import net.doubledoordev.launcher.util.winreg.JavaFinder;
 import net.doubledoordev.launcher.util.winreg.JavaInfo;
 
+import java.io.File;
+import java.io.IOException;
+
+import static net.doubledoordev.launcher.util.Constants.LOGGER;
+
 /**
  * @author Dries007
  */
@@ -59,5 +64,31 @@ public class MiscHelper
 
         // Windows specific code adds <java.home>/bin/java no need mangle javaw.exe here.
         return System.getProperty("java.home") + "/bin/java";
+    }
+
+    public static void checkLock(File folder)
+    {
+        if (!folder.isDirectory()) throw new IllegalArgumentException("Not valid " + folder + ". Must be folder.");
+
+        final File lockFile = new File(folder, "lock");
+        if (lockFile.exists()) throw new RuntimeException("Lock file in place.");
+        try
+        {
+            //noinspection ResultOfMethodCallIgnored
+            lockFile.createNewFile();
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run()
+                {
+                    //noinspection ResultOfMethodCallIgnored
+                    lockFile.delete();
+                }
+            }));
+        }
+        catch (IOException e)
+        {
+            LOGGER.warn("Could not create lockfile! This might cause trouble!!");
+            e.printStackTrace();
+        }
     }
 }

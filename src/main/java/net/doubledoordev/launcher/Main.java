@@ -30,11 +30,8 @@
 
 package net.doubledoordev.launcher;
 
-import net.doubledoordev.launcher.util.PackDownloaded;
 import net.doubledoordev.launcher.util.Side;
-import org.apache.logging.log4j.util.Strings;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
@@ -43,36 +40,17 @@ import static net.doubledoordev.launcher.util.Constants.*;
 /**
  * @author Dries007
  */
-public class Main
+public abstract class Main
 {
-    public static Side side = Side.CLIENT;
-    public static boolean ignoreIncomplete;
+    public static Main instance;
+    public final Side currentSide;
+    public final BufferedReader consoleInput;
 
-    private Main()
+    protected Main(Side side) throws Exception
     {
-
-    }
-
-    public static void main(String[] args) throws Exception
-    {
-        String packID = null;
-        for (int i = 0; i < args.length; i++)
-        {
-            switch (args[i])
-            {
-                case "server":
-                    side = Side.SERVER;
-                    break;
-                case "packid":
-                    if (i + 1 < args.length) packID = args[++ i];
-                    break;
-                case "ignoreIncomplete":
-                    ignoreIncomplete = true;
-                default:
-                    LOGGER.warn(String.format("Unused argument: %s", args[i]));
-            }
-        }
-        if (GraphicsEnvironment.isHeadless()) side = Side.SERVER;
+        consoleInput = new BufferedReader(new InputStreamReader(System.in));
+        currentSide = side;
+        instance = this;
 
         //noinspection ResultOfMethodCallIgnored
         INSTANCES.mkdir();
@@ -82,16 +60,5 @@ public class Main
         MAVEN_CACHE.mkdir();
         //noinspection ResultOfMethodCallIgnored
         FORGE_VERSIONS.mkdirs();
-
-        if (side == Side.SERVER)
-        {
-            BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-            if (Strings.isBlank(packID))
-            {
-                LOGGER.info("No packid argument, please enter the required packid:");
-                packID = input.readLine();
-            }
-            new PackDownloaded(packID);
-        }
     }
 }

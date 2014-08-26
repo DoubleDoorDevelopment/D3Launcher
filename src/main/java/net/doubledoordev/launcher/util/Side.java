@@ -33,8 +33,10 @@ package net.doubledoordev.launcher.util;
 import net.doubledoordev.launcher.util.packData.PackData;
 import org.codehaus.plexus.util.FileUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,91 +48,96 @@ import static net.doubledoordev.launcher.util.Constants.*;
  */
 public enum Side
 {
-    SERVER("minecraft_server.%s.jar", URL_MC_SERVER),
-    CLIENT("%s.jar", URL_MC_CLIENT),
-    BOTH(null, null);
+    SERVER
+            {
+                @Override
+                public void setupMinecraft(PackData packData, File instanceFolder) throws IOException
+                {
+                    String version = packData.mcversion + "-" + packData.forgeversion;
+                    String filename = String.format("forge-%s-installer.jar", version);
+                    File forge = new File(instanceFolder, filename);
+                    File cache = new File(FORGE_VERSIONS, filename);
+                    if (!cache.exists())
+                    {
+                        URL url = new URL(String.format(URL_FORGE_INSTALLER, version, version));
+                        LOGGER.info("Download " + url);
+                        FileUtils.copyURLToFile(url, cache);
+                    }
+                    if (!forge.exists()) FileUtils.copyFile(cache, forge);
 
-    private String filename;
-    private String url;
+                    List<String> arguments = new ArrayList<>();
 
-    Side(String filename, String url)
-    {
-        this.filename = filename;
-        this.url = url;
-    }
+                    arguments.add(MiscHelper.getJavaPath());
+                    arguments.add("-Xmx1G");
+
+                    arguments.add("-jar");
+                    arguments.add(filename);
+
+                    arguments.add("--installServer");
+
+                    ProcessBuilder builder = new ProcessBuilder(arguments);
+                    builder.directory(instanceFolder);
+                    builder.redirectErrorStream(true);
+                    final Process process = builder.start();
+                    LOGGER_INSTALLER.info(arguments.toString());
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    String line;
+                    while ((line = reader.readLine()) != null) LOGGER_INSTALLER.info(line);
+
+                    try
+                    {
+                        process.waitFor();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                    //noinspection ResultOfMethodCallIgnored
+                    forge.delete();
+
+                    String startupline = String.format("\"%s\" %s -server -jar forge-%s-universal.jar nogui", MiscHelper.getJavaPath().replace("javaw.exe", "java.exe"), OPTIMAZATIONS, version);
+                    switch (OSUtils.getCurrentOS())
+                    {
+                        case WINDOWS:
+                            FileUtils.fileWrite(new File(instanceFolder, "start.cmd"), FileUtils.fileRead(this.getClass().getResource("/start.cmd").getFile()).replace("%command%", startupline));
+                            break;
+                        default:
+                            FileUtils.fileWrite(new File(instanceFolder, "start.sh"), FileUtils.fileRead(this.getClass().getResource("/start.sh").getFile()).replace("%command%", startupline));
+                            break;
+                    }
+                }
+            },
+    CLIENT
+            {
+                @Override
+                public void setupMinecraft(PackData packData, File instanceFolder) throws IOException
+                {
+                    String filename = String.format("%s.jar", packData.mcversion);
+                    File mc = new File(instanceFolder, filename);
+                    File cache = new File(MC_VERSIONS, filename);
+                    if (!cache.exists())
+                    {
+                        URL url = new URL(String.format(URL_MC_CLIENT, packData.mcversion, packData.mcversion));
+                        LOGGER.info("Download " + url);
+                        FileUtils.copyURLToFile(url, cache);
+                    }
+                    if (!mc.exists()) FileUtils.copyFile(cache, mc);
+                }
+            },
+    BOTH
+            {
+                @Override
+                public void setupMinecraft(PackData packData, File instanceFolder) throws IOException
+                {
+                    throw new IllegalArgumentException("Invalid side " + this);
+                }
+            };
 
     public boolean appliesTo(Side side)
     {
-        return this == side && this == BOTH;
+        return this == side || this == BOTH;
     }
 
-    public void setupMinecraft(PackData packData, File instanceFolder) throws IOException
-    {
-        if (this == SERVER)
-        {
-            String version = packData.mcversion + "-" + packData.forgeversion;
-            String filename = String.format("forge-%s-installer.jar", version);
-            File forge = new File(instanceFolder, filename);
-            File cache = new File(FORGE_VERSIONS, filename);
-            if (!cache.exists())
-            {
-                URL url = new URL(String.format(URL_FORGE_INSTALLER, version, version));
-                LOGGER.info("Download " + url);
-                FileUtils.copyURLToFile(url, cache);
-            }
-            if (!forge.exists()) FileUtils.copyFile(cache, forge);
-
-            List<String> arguments = new ArrayList<>();
-
-            arguments.add(MiscHelper.getJavaPath());
-            arguments.add("-Xmx1G");
-
-            arguments.add("-jar");
-            arguments.add(filename);
-
-            arguments.add("--installServer");
-
-            ProcessBuilder builder = new ProcessBuilder(arguments);
-            builder.inheritIO();
-            builder.directory(instanceFolder);
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            try
-            {
-                process.waitFor();
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-
-            //noinspection ResultOfMethodCallIgnored
-            forge.delete();
-
-            String startupline = String.format("\"%s\" %s -server -jar forge-%s-universal.jar nogui", MiscHelper.getJavaPath().replace("javaw.exe", "java.exe"), OPTIMAZATIONS, version);
-            switch (OSUtils.getCurrentOS())
-            {
-                case WINDOWS:
-                    FileUtils.fileWrite(new File(instanceFolder, "start.cmd"), FileUtils.fileRead(this.getClass().getResource("/start.cmd").getFile()).replace("%command%", startupline));
-                    break;
-                default:
-                    FileUtils.fileWrite(new File(instanceFolder, "start.sh"), FileUtils.fileRead(this.getClass().getResource("/start.sh").getFile()).replace("%command%", startupline));
-                    break;
-            }
-        }
-        else if (this == CLIENT)
-        {
-            String filename = String.format(this.filename, packData.mcversion);
-            File mc = new File(instanceFolder, filename);
-            File cache = new File(MC_VERSIONS, filename);
-            if (!cache.exists())
-            {
-                URL url = new URL(String.format(this.url, packData.mcversion, packData.mcversion));
-                LOGGER.info("Download " + url);
-                FileUtils.copyURLToFile(url, cache);
-            }
-            if (!mc.exists()) FileUtils.copyFile(cache, mc);
-        }
-        else throw new IllegalArgumentException("Invalid side " + this);
-    }
+    public abstract void setupMinecraft(PackData packData, File instanceFolder) throws IOException;
 }

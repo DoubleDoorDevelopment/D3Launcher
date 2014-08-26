@@ -30,13 +30,15 @@
 
 package net.doubledoordev.launcher.util;
 
-import net.doubledoordev.launcher.Main;
 import net.doubledoordev.launcher.util.packData.PackData;
 import org.apache.maven.model.Dependency;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -49,50 +51,59 @@ import static net.doubledoordev.launcher.util.Constants.*;
 /**
  * @author Dries007
  */
-public class PackDownloaded
+public class PackBuilder
 {
-    public PackDownloaded(String id) throws IOException
-    {
-        File instanceFolder;
-        File modsFolder;
-        PackData packData;
+    public final String id;
+    public final File instanceFolder;
+    public final File modsFolder;
+    public final PackData packData;
+    public final List<Dependency> mods;
+    public final List<Dependency> configs;
+    public final HashSet<Object> missingMods = new HashSet<>();
+    public final HashSet<Object> missingConfigs = new HashSet<>();
+    public final Side side;
 
+    public PackBuilder(Side side, String id) throws IOException
+    {
+        this.side = side;
+        this.id = id;
         instanceFolder = new File(INSTANCES, id);
         //noinspection ResultOfMethodCallIgnored
         instanceFolder.mkdirs();
+        MiscHelper.checkLock(instanceFolder);
         modsFolder = new File(instanceFolder, "mods");
         //noinspection ResultOfMethodCallIgnored
         modsFolder.mkdir();
-
         File jsonFile = new File(instanceFolder, "pack.json");
         if (!jsonFile.exists()) FileUtils.copyURLToFile(new URL(String.format(JSONURL, id)), jsonFile);
 
         packData = GSON.fromJson(new FileReader(jsonFile), PackData.class);
         packData.mavenrepos.add(URL_ASSETS);
+        packData.mavenrepos.add(FORGEMAVEN);
 
         LOGGER.info(String.format("Modpack %s, location: %s", id, instanceFolder));
         LOGGER.info(packData);
 
-        List<Dependency> mods = packData.getAllModsAsDependencies();
-        List<Dependency> configs = packData.getAllConfigsAsDependencies();
-        HashSet<Dependency> missing = new HashSet<>();
-        for (Dependency dependency : mods) if (!MavenHelper.download(packData.mavenrepos, dependency)) missing.add(dependency);
-        for (Dependency dependency : configs) if (!MavenHelper.download(packData.mavenrepos, dependency)) missing.add(dependency);
-        if (!missing.isEmpty())
+        mods = packData.getAllModsAsDependencies();
+        configs = packData.getAllConfigsAsDependencies();
+    }
+
+    public boolean download() throws IOException
+    {
+        for (Dependency dependency : mods) if (!MavenHelper.download(packData.mavenrepos, dependency)) missingMods.add(dependency);
+        for (Dependency dependency : configs) if (!MavenHelper.download(packData.mavenrepos, dependency)) missingConfigs.add(dependency);
+        mods.removeAll(missingMods);
+        configs.removeAll(missingConfigs);
+
+        return missingMods.isEmpty() && missingConfigs.isEmpty();
+    }
+
+    public void copy() throws IOException
+    {
+        for (Dependency mod : mods)
         {
-            LOGGER.warn("Missing mods! " + missing.toString());
-            if (!Main.ignoreIncomplete)
-            {
-                LOGGER.warn("Too ignore this error, add 'ignoreIncomplete' to your program arguments.");
-                throw new FileNotFoundException();
-            }
-            else
-            {
-                LOGGER.warn("Ignoring the missing mod files.");
-            }
+            FileUtils.copyFileToDirectory(MavenHelper.getFile(mod), modsFolder);
         }
-        mods.removeAll(missing);
-        for (Dependency mod : mods) FileUtils.copyFileToDirectory(MavenHelper.getFile(mod), modsFolder);
         for (Dependency config : configs)
         {
             File configFile = MavenHelper.getFile(config);
@@ -103,7 +114,7 @@ public class PackDownloaded
                 while (enumeration.hasMoreElements())
                 {
                     ZipEntry zipEntry = enumeration.nextElement();
-                    LOGGER.info(zipEntry.getName());
+                    LOGGER.debug(zipEntry.getName());
                     if (zipEntry.isDirectory())
                         //noinspection ResultOfMethodCallIgnored
                         new File(instanceFolder, zipEntry.getName()).mkdir();
@@ -112,7 +123,10 @@ public class PackDownloaded
             }
             else FileUtils.copyFileToDirectory(configFile, instanceFolder);
         }
+    }
 
-        Main.side.setupMinecraft(packData, instanceFolder);
+    public void buildMc() throws IOException
+    {
+        side.setupMinecraft(packData, instanceFolder);
     }
 }
