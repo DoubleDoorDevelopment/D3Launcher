@@ -31,13 +31,16 @@
 package net.doubledoordev.launcher.server;
 
 import net.doubledoordev.launcher.Main;
+import net.doubledoordev.launcher.util.MiscHelper;
 import net.doubledoordev.launcher.util.PackBuilder;
 import net.doubledoordev.launcher.util.Side;
 import org.apache.logging.log4j.util.Strings;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
+import static net.doubledoordev.launcher.util.Constants.INSTANCES;
 import static net.doubledoordev.launcher.util.Constants.LOGGER;
 
 /**
@@ -50,9 +53,10 @@ public class Server extends Main
         new Server(args);
     }
 
-    public String packID;
+    public String packID, name;
     public boolean headless = GraphicsEnvironment.isHeadless();
     public boolean ignoreIncomplete = false;
+    public boolean override = false;
 
     protected Server(String[] args) throws Exception
     {
@@ -68,10 +72,27 @@ public class Server extends Main
                 case "packid":
                     if (i + 1 < args.length) packID = args[++ i];
                     break;
+                case "name":
+                    if (i + 1 < args.length) name = args[++ i];
+                    break;
                 case "ignoreIncomplete":
                     ignoreIncomplete = true;
+                    break;
+                case "override":
+                    override = true;
+                    break;
                 default:
                     LOGGER.warn(String.format("Unused argument: %s", args[i]));
+                    // No break because we want the help to display.
+                case "help":
+                case "?":
+                    LOGGER.warn("Proper arguments:");
+                    LOGGER.warn("-----------------");
+                    LOGGER.warn("nogiu: Do all interaction via command prompt");
+                    LOGGER.warn("packid <id>: Set the packid. If not set, this is asked later.");
+                    LOGGER.warn("name <name>: Override the default name (for the instance folder). Defaults to the packid.");
+                    LOGGER.warn("ignoreIncomplete: Ignores mods that can't be found and make the server anyways. Experts only!");
+                    LOGGER.warn("override: Override the files in the instance folder without asking. Experts only!");
             }
         }
 
@@ -89,9 +110,34 @@ public class Server extends Main
                 packID = JOptionPane.showInputDialog(null, "Please enter the required packid", "Packid?", JOptionPane.QUESTION_MESSAGE);
             }
         }
+        if (Strings.isBlank(name)) name = packID;
+
+        File instanceFolder = new File(INSTANCES, name);
+
+        if (instanceFolder.exists())
+        {
+            LOGGER.info("Instancefolder already exists!");
+            if (!override)
+            {
+                if (headless)
+                {
+                    LOGGER.info("Want to continue?");
+                    LOGGER.info("Please enter 'true' or 'false':");
+                    if (!Boolean.parseBoolean(consoleInput.readLine())) return;
+                }
+                else
+                {
+                    if (JOptionPane.showConfirmDialog(null, "Instancefolder already exists!\nContinue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+                }
+            }
+
+        }
+        //noinspection ResultOfMethodCallIgnored
+        instanceFolder.mkdirs();
+        MiscHelper.checkLock(instanceFolder);
 
         LOGGER.info("Making a pack builder...");
-        PackBuilder packBuilder = new PackBuilder(currentSide, packID);
+        PackBuilder packBuilder = new PackBuilder(instanceFolder, currentSide, name, packID);
         LOGGER.info("Initiate download...");
         boolean complete = packBuilder.download();
 

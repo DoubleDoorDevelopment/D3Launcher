@@ -54,6 +54,7 @@ import static net.doubledoordev.launcher.util.Constants.*;
 public class PackBuilder
 {
     public final String id;
+    public final String name;
     public final File instanceFolder;
     public final File modsFolder;
     public final PackData packData;
@@ -63,14 +64,13 @@ public class PackBuilder
     public final HashSet<Object> missingConfigs = new HashSet<>();
     public final Side side;
 
-    public PackBuilder(Side side, String id) throws IOException
+    public PackBuilder(File instanceFolder, Side side, String name, String id) throws IOException
     {
         this.side = side;
+        this.name = name;
         this.id = id;
-        instanceFolder = new File(INSTANCES, id);
-        //noinspection ResultOfMethodCallIgnored
-        instanceFolder.mkdirs();
-        MiscHelper.checkLock(instanceFolder);
+        this.instanceFolder = instanceFolder;
+
         modsFolder = new File(instanceFolder, "mods");
         //noinspection ResultOfMethodCallIgnored
         modsFolder.mkdir();

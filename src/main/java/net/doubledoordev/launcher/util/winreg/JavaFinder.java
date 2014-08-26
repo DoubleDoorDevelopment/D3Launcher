@@ -196,7 +196,7 @@ public class JavaFinder
                 }
                 if (java.supportedVersion)
                 {
-                    if (preferred == null && java != null) preferred = java;
+                    if (preferred == null) preferred = java;
                     if (java.is64bits) java64.add(java);
                     else java32.add(java);
                 }
@@ -206,6 +206,7 @@ public class JavaFinder
             {
                 for (JavaInfo aJava64 : java64)
                 {
+                    if (aJava64.isJava8()) continue; // Java 8 doesn't play well with Forge
                     if (!preferred.is64bits || aJava64.compareTo(preferred) == 1) preferred = aJava64;
                 }
             }
@@ -213,6 +214,7 @@ public class JavaFinder
             {
                 for (JavaInfo aJava32 : java32)
                 {
+                    if (aJava32.isJava8()) continue; // Java 8 doesn't play well with Forge
                     if (!preferred.is64bits && aJava32.compareTo(preferred) == 1) preferred = aJava32;
                 }
             }
