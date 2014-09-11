@@ -44,24 +44,30 @@ import java.io.IOException;
  */
 public class Constants
 {
+    public static final String NAME             = "D³ Launcher";
+
     public static final Logger LOGGER = LogManager.getLogger(Main.class.getSimpleName());
     public static final Logger LOGGER_INSTALLER = LogManager.getLogger("Installer");
-    public static final Gson   GSON   = new GsonBuilder().setPrettyPrinting().create();
+    public static final Logger LOGGER_MINECRAFT = LogManager.getLogger("Minecraft");
+
+    public static final Gson   GSON          = new GsonBuilder().setPrettyPrinting().create();
     public static final String OPTIMAZATIONS = "-Xms1G -Xmx1G -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CICompilerCountPerCPU -XX:+TieredCompilation";
 
     /*
      * Files
      */
-    public static final File ROOT           = getRootFile();
-    public static final File INSTANCES      = new File(ROOT, "instances");
-    public static final File MC_VERSIONS    = new File(ROOT, "mcVersions");
-    public static final File FORGE_VERSIONS = new File(ROOT, "forgeVersions");
-    public static final File MAVEN_CACHE    = new File(ROOT, "mavenCache");
+    public static final File ROOT             = getRootFile();
+    public static final File SERVER_INSTANCES = new File(ROOT, "serverInstances");
+    public static final File CLIENT_INSTANCES = new File(ROOT, "clientInstances");
+    public static final File MC_VERSIONS      = new File(ROOT, "mcVersions");
+    public static final File FORGE_VERSIONS   = new File(ROOT, "forgeVersions");
+    public static final File MAVEN_CACHE      = new File(ROOT, "mavenCache");
 
     /*
      * URLs
      */
-    public static final String BASEURL             = "http://dries007.net/ddd/modpacks/";
+    public static final String BASEURL             = "http://dries007.net/ddd/modpacks/"; //TODO: change to proper value.
+    public static final String NEWSURL             = BASEURL + "news.php";
     public static final String JSONURL             = BASEURL + "json/%s.json";
     public static final String URL_ASSETS          = "https://s3.amazonaws.com/MinecraftResources/";
     public static final String URL_MC_CLIENT       = "http://s3.amazonaws.com/Minecraft.Download/versions/%s/%s.jar";

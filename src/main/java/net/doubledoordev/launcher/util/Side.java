@@ -107,6 +107,12 @@ public enum Side
                             break;
                     }
                 }
+
+                @Override
+                public File getInstancesFolder()
+                {
+                    return Constants.SERVER_INSTANCES;
+                }
             },
     CLIENT
             {
@@ -124,11 +130,23 @@ public enum Side
                     }
                     if (!mc.exists()) FileUtils.copyFile(cache, mc);
                 }
+
+                @Override
+                public File getInstancesFolder()
+                {
+                    return Constants.CLIENT_INSTANCES;
+                }
             },
     BOTH
             {
                 @Override
                 public void setupMinecraft(PackData packData, File instanceFolder) throws IOException
+                {
+                    throw new IllegalArgumentException("Invalid side " + this);
+                }
+
+                @Override
+                public File getInstancesFolder()
                 {
                     throw new IllegalArgumentException("Invalid side " + this);
                 }
@@ -140,4 +158,6 @@ public enum Side
     }
 
     public abstract void setupMinecraft(PackData packData, File instanceFolder) throws IOException;
+
+    public abstract File getInstancesFolder();
 }

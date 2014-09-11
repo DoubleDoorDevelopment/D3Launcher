@@ -31,7 +31,6 @@
 package net.doubledoordev.launcher.server;
 
 import net.doubledoordev.launcher.Main;
-import net.doubledoordev.launcher.util.MiscHelper;
 import net.doubledoordev.launcher.util.PackBuilder;
 import net.doubledoordev.launcher.util.Side;
 import org.apache.logging.log4j.util.Strings;
@@ -40,8 +39,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 
-import static net.doubledoordev.launcher.util.Constants.INSTANCES;
 import static net.doubledoordev.launcher.util.Constants.LOGGER;
+import static net.doubledoordev.launcher.util.Constants.SERVER_INSTANCES;
 
 /**
  * @author Dries007
@@ -60,8 +59,82 @@ public class Server extends Main
 
     protected Server(String[] args) throws Exception
     {
-        super(Side.SERVER);
-        // Parse args
+        super(Side.SERVER, args);
+
+        // User input
+        if (Strings.isBlank(packID))
+        {
+            LOGGER.info("No packid provided.");
+            if (headless)
+            {
+                LOGGER.info("Please enter the required packid:");
+                packID = consoleInput.readLine();
+            }
+            else
+            {
+                packID = JOptionPane.showInputDialog(null, "Please enter the required packid", "Packid?", JOptionPane.QUESTION_MESSAGE);
+            }
+        }
+        if (Strings.isBlank(name)) name = packID;
+
+        File instanceFolder = new File(SERVER_INSTANCES, name);
+        if (instanceFolder.exists())
+        {
+            LOGGER.info("Instance folder '" + name + "' already exists!");
+            if (!override)
+            {
+                if (headless)
+                {
+                    LOGGER.info("Want to continue?");
+                    LOGGER.info("Please enter 'true' or 'false':");
+                    if (!Boolean.parseBoolean(consoleInput.readLine())) return;
+                }
+                else
+                {
+                    if (JOptionPane.showConfirmDialog(null, "Instance folder '\" + name + \"' already exists!\nContinue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+                }
+            }
+
+        }
+        //noinspection ResultOfMethodCallIgnored
+        instanceFolder.mkdirs();
+
+        LOGGER.info("Making a pack builder...");
+        PackBuilder packBuilder = new PackBuilder(instanceFolder, currentSide, name, packID);
+        LOGGER.info("Initiate download...");
+        boolean complete = packBuilder.download();
+
+        // User input
+        if (!complete)
+        {
+            LOGGER.warn("Missing mods: " + packBuilder.missingMods);
+            LOGGER.warn("Missing configs: " + packBuilder.missingConfigs);
+
+            if (!ignoreIncomplete)
+            {
+                if (headless)
+                {
+                    LOGGER.info("Want to continue?");
+                    LOGGER.info("Please enter 'true' or 'false':");
+                    if (!Boolean.parseBoolean(consoleInput.readLine())) return;
+                }
+                else
+                {
+                    if (JOptionPane.showConfirmDialog(null, "Some mods where missing. Do you want to continue?\nMissing mods: " + packBuilder.missingMods + "\nMissing configs: " + packBuilder.missingConfigs, "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+                }
+            }
+        }
+
+        LOGGER.info("Copying mod/config files to instance folder...");
+        packBuilder.copy();
+
+        LOGGER.info("Building the Minecraft instance...");
+        packBuilder.buildMc();
+    }
+
+    @Override
+    protected void parseArgs(String[] args)
+    {
         for (int i = 0; i < args.length; i++)
         {
             switch (args[i])
@@ -95,77 +168,13 @@ public class Server extends Main
                     LOGGER.warn("override: Override the files in the instance folder without asking. Experts only!");
             }
         }
+    }
 
-        // User input
-        if (Strings.isBlank(packID))
-        {
-            LOGGER.info("No packid provided.");
-            if (headless)
-            {
-                LOGGER.info("Please enter the required packid:");
-                packID = consoleInput.readLine();
-            }
-            else
-            {
-                packID = JOptionPane.showInputDialog(null, "Please enter the required packid", "Packid?", JOptionPane.QUESTION_MESSAGE);
-            }
-        }
-        if (Strings.isBlank(name)) name = packID;
-
-        File instanceFolder = new File(INSTANCES, name);
-
-        if (instanceFolder.exists())
-        {
-            LOGGER.info("Instancefolder already exists!");
-            if (!override)
-            {
-                if (headless)
-                {
-                    LOGGER.info("Want to continue?");
-                    LOGGER.info("Please enter 'true' or 'false':");
-                    if (!Boolean.parseBoolean(consoleInput.readLine())) return;
-                }
-                else
-                {
-                    if (JOptionPane.showConfirmDialog(null, "Instancefolder already exists!\nContinue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
-                }
-            }
-
-        }
-        //noinspection ResultOfMethodCallIgnored
-        instanceFolder.mkdirs();
-        MiscHelper.checkLock(instanceFolder);
-
-        LOGGER.info("Making a pack builder...");
-        PackBuilder packBuilder = new PackBuilder(instanceFolder, currentSide, name, packID);
-        LOGGER.info("Initiate download...");
-        boolean complete = packBuilder.download();
-
-        // User input
-        if (!complete)
-        {
-            LOGGER.warn("Missing mods: " + packBuilder.missingMods);
-            LOGGER.warn("Missing configs: " + packBuilder.missingConfigs);
-
-            if (!ignoreIncomplete)
-            {
-                if (headless)
-                {
-                    LOGGER.info("Want to continue?");
-                    LOGGER.info("Please enter 'true' or 'false':");
-                    if (!Boolean.parseBoolean(consoleInput.readLine())) return;
-                }
-                else
-                {
-                    if (JOptionPane.showConfirmDialog(null, "Some mods where missing. Do you want to continue?\nMissing mods: " + packBuilder.missingMods + "\nMissing configs: " + packBuilder.missingConfigs, "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
-                }
-            }
-        }
-
-        LOGGER.info("Copying mod/config files to instance folder...");
-        packBuilder.copy();
-
-        LOGGER.info("Building the Minecraft instance...");
-        packBuilder.buildMc();
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Override
+    protected void makeFolders()
+    {
+        super.makeFolders();
+        SERVER_INSTANCES.mkdir();
     }
 }

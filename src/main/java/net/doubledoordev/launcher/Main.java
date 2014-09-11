@@ -46,19 +46,26 @@ public abstract class Main
     public final Side currentSide;
     public final BufferedReader consoleInput;
 
-    protected Main(Side side) throws Exception
+    protected Main(Side side, String[] args) throws Exception
     {
         consoleInput = new BufferedReader(new InputStreamReader(System.in));
         currentSide = side;
         instance = this;
 
-        //noinspection ResultOfMethodCallIgnored
-        INSTANCES.mkdir();
-        //noinspection ResultOfMethodCallIgnored
+        makeFolders();
+        parseArgs(args);
+    }
+
+    protected void parseArgs(String[] args)
+    {
+
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    protected void makeFolders()
+    {
         MC_VERSIONS.mkdir();
-        //noinspection ResultOfMethodCallIgnored
         MAVEN_CACHE.mkdir();
-        //noinspection ResultOfMethodCallIgnored
         FORGE_VERSIONS.mkdirs();
     }
 }

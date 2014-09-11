@@ -31,8 +31,10 @@
 package net.doubledoordev.launcher.util.packData;
 
 import net.doubledoordev.launcher.Main;
+import net.doubledoordev.launcher.util.Side;
 import org.apache.maven.model.Dependency;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +45,8 @@ import java.util.List;
 @SuppressWarnings("UnusedDeclaration")
 public class PackData
 {
+    public String          id;
+    public String          name;
     public String          mcversion;
     public String          forgeversion;
     public HashSet<String> mavenrepos;
@@ -72,5 +76,10 @@ public class PackData
             if (mod.config != null) dependencies.add(mod.config);
         }
         return dependencies;
+    }
+
+    public File getInstanceFolder(Side side)
+    {
+        return new File(side.getInstancesFolder(), name);
     }
 }

@@ -30,6 +30,7 @@
 
 package net.doubledoordev.launcher.util;
 
+import com.google.common.base.Strings;
 import net.doubledoordev.launcher.util.packData.PackData;
 import org.apache.maven.model.Dependency;
 import org.codehaus.plexus.util.FileUtils;
@@ -53,9 +54,6 @@ import static net.doubledoordev.launcher.util.Constants.*;
  */
 public class PackBuilder
 {
-    public final String id;
-    public final String name;
-    public final File instanceFolder;
     public final File modsFolder;
     public final PackData packData;
     public final List<Dependency> mods;
@@ -64,12 +62,22 @@ public class PackBuilder
     public final HashSet<Object> missingConfigs = new HashSet<>();
     public final Side side;
 
+    public PackBuilder(PackData packData, Side side)
+    {
+        this.packData = packData;
+        this.side = side;
+
+        modsFolder = new File(packData.getInstanceFolder(side), "mods");
+        //noinspection ResultOfMethodCallIgnored
+        modsFolder.mkdir();
+
+        mods = packData.getAllModsAsDependencies();
+        configs = packData.getAllConfigsAsDependencies();
+    }
+
     public PackBuilder(File instanceFolder, Side side, String name, String id) throws IOException
     {
         this.side = side;
-        this.name = name;
-        this.id = id;
-        this.instanceFolder = instanceFolder;
 
         modsFolder = new File(instanceFolder, "mods");
         //noinspection ResultOfMethodCallIgnored
@@ -78,8 +86,10 @@ public class PackBuilder
         if (!jsonFile.exists()) FileUtils.copyURLToFile(new URL(String.format(JSONURL, id)), jsonFile);
 
         packData = GSON.fromJson(new FileReader(jsonFile), PackData.class);
-        packData.mavenrepos.add(URL_ASSETS);
-        packData.mavenrepos.add(FORGEMAVEN);
+        if (Strings.isNullOrEmpty(packData.id)) packData.id = id;
+        packData.name = name;
+        if (!packData.mavenrepos.contains(URL_ASSETS)) packData.mavenrepos.add(URL_ASSETS);
+        if (!packData.mavenrepos.contains(FORGEMAVEN)) packData.mavenrepos.add(FORGEMAVEN);
 
         LOGGER.info(String.format("Modpack %s, location: %s", id, instanceFolder));
         LOGGER.info(packData);
@@ -117,16 +127,16 @@ public class PackBuilder
                     LOGGER.debug(zipEntry.getName());
                     if (zipEntry.isDirectory())
                         //noinspection ResultOfMethodCallIgnored
-                        new File(instanceFolder, zipEntry.getName()).mkdir();
-                    else IOUtil.copy(zipFile.getInputStream(zipEntry), new FileWriter(new File(instanceFolder, zipEntry.getName())));
+                        new File(packData.getInstanceFolder(side), zipEntry.getName()).mkdir();
+                    else IOUtil.copy(zipFile.getInputStream(zipEntry), new FileWriter(new File(packData.getInstanceFolder(side), zipEntry.getName())));
                 }
             }
-            else FileUtils.copyFileToDirectory(configFile, instanceFolder);
+            else FileUtils.copyFileToDirectory(configFile, packData.getInstanceFolder(side));
         }
     }
 
     public void buildMc() throws IOException
     {
-        side.setupMinecraft(packData, instanceFolder);
+        side.setupMinecraft(packData, packData.getInstanceFolder(side));
     }
 }

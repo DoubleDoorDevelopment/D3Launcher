@@ -31,13 +31,32 @@
 package net.doubledoordev.launcher.client;
 
 import net.doubledoordev.launcher.Main;
+import net.doubledoordev.launcher.client.gui.ConsoleWindow;
+import net.doubledoordev.launcher.client.gui.MainGui;
+import net.doubledoordev.launcher.util.MiscHelper;
 import net.doubledoordev.launcher.util.Side;
+import net.doubledoordev.launcher.util.packData.PackData;
+import org.codehaus.plexus.util.FileUtils;
+
+import javax.swing.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import static net.doubledoordev.launcher.util.Constants.CLIENT_INSTANCES;
+import static net.doubledoordev.launcher.util.Constants.GSON;
 
 /**
  * @author Dries007
  */
 public class Client extends Main
 {
+    public ArrayList<PackData> packs = new ArrayList<>();
+    private final File packsFile = new File(CLIENT_INSTANCES, "packs.json");
+    public static Client instance;
+
     public static void main(String[] args) throws Exception
     {
         new Client(args);
@@ -45,6 +64,76 @@ public class Client extends Main
 
     protected Client(String[] args) throws Exception
     {
-        super(Side.CLIENT);
+        super(Side.CLIENT, args);
+        instance = this;
+
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            try {
+                UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
+
+        ConsoleWindow.INSTANCE.init();
+
+        if (packsFile.exists())
+        {
+            Collections.addAll(packs, GSON.fromJson(new FileReader(packsFile), PackData[].class));
+        }
+
+        MainGui.INSTANCE.updatePacks();
+        MainGui.INSTANCE.show();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                savePackList();
+            }
+        }));
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Override
+    protected void makeFolders()
+    {
+        super.makeFolders();
+        CLIENT_INSTANCES.mkdirs();
+    }
+
+    public void savePackList()
+    {
+        try
+        {
+            FileUtils.fileWrite(packsFile, GSON.toJson(packs));
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public void addPack(PackData packData) throws Exception
+    {
+        packs.add(packData);
+        savePackList();
+        MainGui.INSTANCE.updatePacks();
+    }
+
+    public void deletePack(PackData data)
+    {
+        packs.remove(data);
+        MiscHelper.dieFolderDie(data.getInstanceFolder(Side.CLIENT));
+        savePackList();
+        MainGui.INSTANCE.updatePacks();
     }
 }
